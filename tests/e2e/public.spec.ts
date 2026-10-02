@@ -28,12 +28,12 @@ test("registration rejects short passwords without contacting email service", as
     .fill("validation@example.invalid");
   await page.getByLabel("Пароль", { exact: true }).fill("short");
   await page.getByRole("button", { name: "Створити профіль" }).click();
-  await expect(page.getByRole("alert")).toHaveText("Мінімум 12 символів");
+  await expect(page.getByRole("alert").filter({ hasText: "Мінімум 12 символів" })).toHaveText("Мінімум 12 символів");
 });
 test("callback without code redirects to controlled error page", async ({
   page,
 }) => {
   await page.goto("/auth/callback?next=https://evil.example");
   await expect(page).toHaveURL(/\/auth\/login\?error=callback/);
-  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Посилання недійсне або застаріле. Спробуйте ще раз" })).toBeVisible();
 });
