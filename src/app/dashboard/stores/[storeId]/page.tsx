@@ -70,7 +70,24 @@ export default async function StorePage({
           <h1>{store.name}</h1>
           <p className="muted">Керуйте товарами, категоріями та варіантами.</p>
         </div>
-        <span className="badge">Роль: {member.role}</span>
+        <div className="design-toolbar-actions">
+          <span className="badge">Роль: {member.role}</span>
+          <Link
+            className="button"
+            href={"/dashboard/stores/" + storeId + "/design"}
+          >
+            Дизайн магазину
+          </Link>
+          {store.status === "active" && (
+            <Link
+              className="button secondary"
+              href={"/shop/" + store.slug}
+              target="_blank"
+            >
+              Відкрити вітрину
+            </Link>
+          )}
+        </div>
       </div>
       <section className="card">
         <h2>Товари</h2>
