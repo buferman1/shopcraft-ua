@@ -19,11 +19,12 @@ export async function createStore(
   const parsed = storeSchema.safeParse(values(data));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const { supabase, user } = await requireUser();
-  const { data: store, error } = await supabase
+  const storeId = crypto.randomUUID();
+  // RETURNING runs the SELECT policy before the AFTER INSERT membership trigger.
+  // Keep the generated ID and read the store after the insert has completed.
+  const { error } = await supabase
     .from("stores")
-    .insert({ ...parsed.data, owner_id: user.id })
-    .select("id")
-    .single();
+    .insert({ ...parsed.data, id: storeId, owner_id: user.id });
   if (error)
     return {
       error:
@@ -32,7 +33,7 @@ export async function createStore(
           : "Не вдалося створити магазин.",
     };
   revalidatePath("/dashboard");
-  redirect("/dashboard/stores/" + store.id);
+  redirect("/dashboard/stores/" + storeId);
 }
 export async function saveProduct(
   storeId: string,
@@ -103,14 +104,12 @@ export async function addVariant(
   if (!parsed.success || !uuidSchema.safeParse(productId).success)
     return { error: "Перевірте назву, SKU й цілий невід’ємний залишок." };
   const { size, color, ...variant } = parsed.data;
-  const { error } = await supabase
-    .from("product_variants")
-    .insert({
-      ...variant,
-      product_id: productId,
-      store_id: storeId,
-      options: { size, color },
-    });
+  const { error } = await supabase.from("product_variants").insert({
+    ...variant,
+    product_id: productId,
+    store_id: storeId,
+    options: { size, color },
+  });
   if (error)
     return {
       error:

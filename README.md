@@ -40,7 +40,7 @@ npm run dev -- --hostname 127.0.0.1
 3. У Vercel створіть/зв’яжіть проєкт із репозиторієм і додайте три public-змінні вище для відповідного середовища; APP_URL має відповідати адресу deployment.
 4. Після deployment перевірте реєстрацію → email → callback → магазин → товар → фото → вихід/повторний вхід.
 
-Ці поштові сценарії ще не пройдені наскрізно з реальною поштою. Vercel deployment у цьому етапі не виконано. Авторизація спирається на вбудовані обмеження Supabase Auth; окремий distributed rate limiter для бізнес-дій ще не реалізований.
+Ці поштові сценарії ще не пройдені наскрізно з реальною поштою. Vercel preview гілки `feat/auth-and-catalog` розгорнуто; `/api/health` підтверджує з’єднання з базою. Production-реліз ще не готовий. Авторизація спирається на вбудовані обмеження Supabase Auth; окремий distributed rate limiter для бізнес-дій ще не реалізований.
 
 ## База даних
 
@@ -59,9 +59,22 @@ npx playwright install chromium
 npm run test:e2e           # desktop і mobile: публічні сценарії та захист кабінету
 ```
 
+`tests/store-creation.test.ts` відтворює ситуацію, коли `INSERT ... RETURNING` блокується SELECT-політикою до виконання тригера членства. Server Action генерує UUID, виконує INSERT без RETURNING і переходить до нового магазину після завершення транзакції. Тест також перевіряє конфлікт адреси, відсутність запису без входу та ігнорування переданого клієнтом власника/ID. Зміни RLS або привілейовані ключі для виправлення не потрібні.
+
+Окремий сценарій `tests/integration/catalog-actions.test.ts` викликає справжні Server Actions із клієнтом реального Supabase. Він перевіряє створення магазину, категорії й товару, редагування, варіанти/залишки, фактичне завантаження й читання PNG, відхилення підробленого фото, ізоляцію іншого акаунта, audit log та повторний вхід. Тільки Next redirect/cache і отримання серверного клієнта замінені тестовими адаптерами; Auth, SQL/RLS та Storage залишаються реальними.
+
+Для цього сценарію використовуйте тестовий Supabase та два тимчасові підтверджені акаунти. Файл поза Git має структуру `{"users":[{"id":"USER_A_UUID","email":"TEST_A_EMAIL","password":"TEST_A_PASSWORD"},{"id":"USER_B_UUID","email":"TEST_B_EMAIL","password":"TEST_B_PASSWORD"}],"stores":[],"objects":[]}`. Тест дописує створені store IDs і шляхи фото для очищення; фото прибирає в `finally`. Після запуску видаліть тільки ці тестові магазини/акаунти й файл із паролями.
+
+```sh
+SHOPCRAFT_API_FIXTURE_FILE=/absolute/private/fixture.json \
+  node --env-file=.env.local node_modules/vitest/vitest.mjs run tests/integration
+```
+
+Без `SHOPCRAFT_API_FIXTURE_FILE` live-сценарій пропускається, тому звичайний CI не пише в реальну базу. Підтвердження email та браузерні дії після входу цим API-сценарієм не перевіряються.
+
 `supabase/tests/tenant_isolation.sql` виконується через SQL Editor або MCP у тестовому проєкті. У транзакції створює тимчасові записи та перевіряє читання/запис між tenants, приватність профілю, owner bootstrap, composite FK, негативний залишок, support-роль, анонімне читання та audit trigger. Наприкінці — ROLLBACK, тестові записи не залишаються.
 
-Останні локальні результати: 21 unit-тест, lint, build, 9 HTTP-перевірок і SQL integration suite пройшли. Browser E2E підготовлені, але локально не запущені: завантаження Chromium повернуло пошкоджений ZIP. CI workflow містить browser-install та E2E; його результат потрібно перевірити окремо. Авторизовані UI-сценарії, mobile/a11y і повний email-flow ще потребують перевірки.
+Останні локальні результати: 24 unit-тести, lint, build, 9 HTTP-перевірок і SQL tenant-isolation suite пройшли. Live-сценарій Server Actions/Auth/Data API/Storage також пройшов на тимчасових підтверджених акаунтах із фактичним PNG upload/download та негативними перевірками доступу; тестові дані очищено. Публічні desktop/mobile E2E запускалися успішно в GitHub CI. Авторизовані UI-сценарії, повний accessibility-аудит і email-flow ще потребують перевірки.
 
 ## Наступні етапи
 
