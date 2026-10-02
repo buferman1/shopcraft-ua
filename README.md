@@ -38,6 +38,16 @@
 
 `npm ci`, `npm run lint`, `npm run build`.
 
-Гілка `feat/platform-foundation` містить лише початковий каркас. `/api/health` навмисно повертає 503 до підключення і перевірки бази. Не використовувати як готовий магазин.
+### Supabase
+
+Підключено Supabase-проєкт у регіоні `eu-central-1` (PostgreSQL 17). Міграція створює базові профілі, магазини, членство й ролі, каталог, варіанти товарів, клієнтів, замовлення та журнал аудиту. Усі 10 таблиць мають RLS; медіафайли завантажуються в bucket `store-media`.
+
+Клієнти для браузера, Server Components/Route Handlers і Next.js Proxy розміщені в `src/lib/supabase/`. Proxy оновлює сесії через перевірку JWT; перевірку доступу до даних надалі потрібно робити серверно та через RLS.
+
+Для локального запуску скопіюйте `.env.example` у `.env.local` і задайте `NEXT_PUBLIC_SUPABASE_URL` та `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` з налаштувань Supabase. Файл `.env.local` ігнорується Git. Publishable key призначений для браузера; secret/service-role key не додавати до `NEXT_PUBLIC_*` і не комітити.
+
+Для Vercel додайте ті самі дві змінні до Project Settings → Environment Variables для Preview і Production, перш ніж створювати deployment.
+
+Базова схема ще не охоплює всі функції платформи, а `/api/health` поки не перевіряє підключення до БД. Не використовувати як готовий магазин.
 
 Supabase MCP повертає Unknown tool; реальна база, міграції та Auth ще не створені. Vercel-проєкт ще не створений.
