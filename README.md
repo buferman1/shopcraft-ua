@@ -1,53 +1,75 @@
 # ShopCraft UA
 
-Українська SaaS-платформа для створення fashion-магазинів.
+Українська SaaS-платформа для fashion-магазинів. **Розробка триває; це ще не production-реліз.**
 
-## Поточний стан
+## Реалізовано
 
-Розробка розпочата. Це не готовий production-реліз.
+- Next.js 16, React, TypeScript, Tailwind; адаптивні сторінки українською.
+- Supabase PostgreSQL/Auth/Storage; браузерний і серверний клієнти, cookie-сесії, Proxy.
+- Форми email-реєстрації, входу, підтвердження через PKCE callback, відновлення та зміни пароля, виходу. React Hook Form і серверна Zod-валідація.
+- Кабінет, створення кількох магазинів, профіль. Створення власника магазину й профілю через тригери.
+- Ролі owner/admin/manager/editor/support; перевірка прав у Server Actions та RLS у БД.
+- Створення й редагування товарів, ціна/SKU/SEO slug/статус, архівація та відновлення через статус.
+- Пошук, фільтр статусу, сортування та пагінація каталогу по 25 товарів.
+- Категорії, варіанти розмірів/кольорів, окремі SKU та залишки; зміна залишків.
+- Фото товарів у Supabase Storage: PNG/JPEG/WebP до 5 МБ, перевірка сигнатури файлу, tenant-папки.
+- Журнал змін каталогу, захист зміни власника магазину, 11 таблиць із RLS і складеними tenant foreign keys.
+- `/api/health` перевіряє реальний запит до Data API, не повертає приватні дані.
 
-Стек: Next.js, React, TypeScript, Tailwind CSS, Supabase Auth/PostgreSQL/Storage, Zod, React Hook Form, Zustand, Vitest, Playwright. Stripe — тестове середовище, до окремого налаштування.
+## Локальний запуск
 
-## Перевірки перед релізом
+Node.js 24. Скопіюйте `.env.example` у `.env.local`, заповніть:
 
-- Реальна база даних і міграції.
-- RLS та перевірки ізоляції магазинів.
-- Авторизація та контроль ролей на сервері.
-- Транзакційне оформлення замовлень і облік залишків.
-- Перевірка webhook та ідемпотентність.
-- Unit, integration, E2E, accessibility та build.
-- Preview перед production deployment.
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
 
-## Етапи
+```sh
+npm ci
+npm run dev -- --hostname 127.0.0.1
+```
 
-1. Інфраструктура й авторизація.
-2. Магазини, ролі, кабінет.
-3. Товари, варіанти, склад і медіа.
-4. Конструктор, шаблони, версії й публікація.
-5. Вітрина, кошик і замовлення.
-6. Підписки й тарифи.
-7. SEO, аналітика й маркетинг.
-8. Домени та адаптери інтеграцій.
-9. Адміністрування, безпека й реліз.
+`.env.local` ігнорується Git. Secret/service-role key не потрібен для цього етапу та не використовується в браузері. Supabase пакети закріплені точними версіями; lockfile входить у репозиторій.
 
-## Секрети
+## Email Auth і deployment
 
-Не зберігати ключі, токени, персональні дані або паролі в Git. Секрети — лише в захищених environment variables / Supabase Secrets.
+1. У Supabase Auth URL Configuration задайте фактичний Site URL і дозволені `/auth/callback` URL для локального/preview/production середовища. Відновлення використовує `/auth/callback?next=/auth/update`.
+2. Не вимикайте підтвердження email для production. Перевірте реальну доставку листів і обмеження вашого SMTP.
+3. У Vercel створіть/зв’яжіть проєкт із репозиторієм і додайте три public-змінні вище для відповідного середовища; APP_URL має відповідати адресу deployment.
+4. Після deployment перевірте реєстрацію → email → callback → магазин → товар → фото → вихід/повторний вхід.
 
-## Початкова основа
+Ці поштові сценарії ще не пройдені наскрізно з реальною поштою. Vercel deployment у цьому етапі не виконано. Авторизація спирається на вбудовані обмеження Supabase Auth; окремий distributed rate limiter для бізнес-дій ще не реалізований.
 
-`npm ci`, `npm run lint`, `npm run build`.
+## База даних
 
-### Supabase
+Проєкт: `lsjtcqbxkheubyrlfsdg`, регіон `eu-central-1`. Дві застосовані міграції збережені в `supabase/migrations/`; їхні версії збігаються з hosted migration history. Після блокування CLI через telemetry друга міграція виконана робочим Supabase MCP API, без запуску CLI. `supabase/config.toml` призначений для локальної розробки; він не змінює hosted Auth settings.
 
-Підключено Supabase-проєкт у регіоні `eu-central-1` (PostgreSQL 17). Міграція створює базові профілі, магазини, членство й ролі, каталог, варіанти товарів, клієнтів, замовлення та журнал аудиту. Усі 10 таблиць мають RLS; медіафайли завантажуються в bucket `store-media`.
+Не застосовуйте архівні/експериментальні SQL-файли. Зміни RLS та індексів перевірені advisors: security WARN/ERROR відсутні, performance WARN/ERROR відсутні. INFO `unused_index` очікуваний у новій порожній базі.
 
-Клієнти для браузера, Server Components/Route Handlers і Next.js Proxy розміщені в `src/lib/supabase/`. Proxy оновлює сесії через перевірку JWT; перевірку доступу до даних надалі потрібно робити серверно та через RLS.
+## Перевірки
 
-Для локального запуску скопіюйте `.env.example` у `.env.local` і задайте `NEXT_PUBLIC_SUPABASE_URL` та `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` з налаштувань Supabase. Файл `.env.local` ігнорується Git. Publishable key призначений для браузера; secret/service-role key не додавати до `NEXT_PUBLIC_*` і не комітити.
+```sh
+npm test                  # Vitest: валідація, ролі, redirect allowlist, сигнатури фото
+npm run lint
+npm run build
+node tests/run-http.mjs    # запускає production-сервер і перевіряє HTTP + реальну БД
+npx playwright install chromium
+npm run test:e2e           # desktop і mobile: публічні сценарії та захист кабінету
+```
 
-Для Vercel додайте ті самі дві змінні до Project Settings → Environment Variables для Preview і Production, перш ніж створювати deployment.
+`supabase/tests/tenant_isolation.sql` виконується через SQL Editor або MCP у тестовому проєкті. У транзакції створює тимчасові записи та перевіряє читання/запис між tenants, приватність профілю, owner bootstrap, composite FK, негативний залишок, support-роль, анонімне читання та audit trigger. Наприкінці — ROLLBACK, тестові записи не залишаються.
 
-Базова схема ще не охоплює всі функції платформи, а `/api/health` поки не перевіряє підключення до БД. Не використовувати як готовий магазин.
+Останні локальні результати: 21 unit-тест, lint, build, 9 HTTP-перевірок і SQL integration suite пройшли. Browser E2E підготовлені, але локально не запущені: завантаження Chromium повернуло пошкоджений ZIP. CI workflow містить browser-install та E2E; його результат потрібно перевірити окремо. Авторизовані UI-сценарії, mobile/a11y і повний email-flow ще потребують перевірки.
 
-Supabase MCP повертає Unknown tool; реальна база, міграції та Auth ще не створені. Vercel-проєкт ще не створений.
+## Наступні етапи
+
+- Повний onboarding, налаштування магазину, керування командою, dashboard продажів.
+- Публікація вітрини, 10 шаблонів, drag-and-drop конструктор, версії та автозбереження.
+- Кошик, транзакційний checkout, замовлення, резервування/списання залишків.
+- Stripe billing, webhooks, тарифні ліміти, invoices; реальні платіжні інтеграції лише після налаштування.
+- Доставка, домени, email-провайдер, SEO, аналітика, купони, Super Admin.
+- Приватність/GDPR-процеси, резервні копії й restore drills, повна перевірка перед production.
+
+Зміна статусу товару на «Активний» ще не публікує магазин. Публікація, замовлення та платежі не імітуються.

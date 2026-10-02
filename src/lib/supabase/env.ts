@@ -1,16 +1,8 @@
-function requiredEnv(name: 'NEXT_PUBLIC_SUPABASE_URL' | 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY') {
-  const value = process.env[name];
-
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-
-  return value;
-}
-
 export function getSupabaseConfig() {
-  return {
-    url: requiredEnv('NEXT_PUBLIC_SUPABASE_URL'),
-    publishableKey: requiredEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'),
-  };
+  // Static property access is required for Next.js browser env substitution.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !publishableKey)
+    throw new Error("Supabase environment is not configured");
+  return { url, publishableKey };
 }
