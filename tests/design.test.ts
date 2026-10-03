@@ -13,12 +13,12 @@ describe("store designs", () => {
     expect(formatPrice(790, "UAH")).toBe("790,00\u00a0₴");
     expect(formatPrice(12450.5, "EUR")).toBe("12\u00a0450,50\u00a0€");
   });
-  it("creates three valid distinct themes and preserves merchant content when switching", () => {
+  it("creates ten valid distinct themes and preserves merchant content when switching", () => {
     const designs = themeIds.map((theme) => defaultDesign("Мій бренд", theme));
     designs.forEach((design) =>
       expect(designSchema.safeParse(design).success).toBe(true),
     );
-    expect(new Set(designs.map((d) => d.background)).size).toBe(3);
+    expect(new Set(designs.map((d) => d.background)).size).toBe(10);
     const original = designs[0];
     original.sections[0].title = "Моя колекція";
     const switched = applyTheme(original, "boutique");

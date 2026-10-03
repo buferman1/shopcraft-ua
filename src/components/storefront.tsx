@@ -96,14 +96,15 @@ export function Storefront({
             <section
               key={section.id}
               id={
-                section.type === "products"
-                  ? "products"
-                  : section.type === "contact"
-                    ? "contact"
-                    : undefined
+                design.sections.find(
+                  (s) => s.enabled && s.type === section.type,
+                )?.id === section.id
+                  ? section.type
+                  : `block-${section.id}`
               }
+              style={{ textAlign: section.align || "left" }}
               data-section={section.id}
-              className={`sf-section sf-section-${section.type} ${preview ? "sf-editable" : ""} ${selectedSection === section.id ? "sf-selected" : ""}`}
+              className={`sf-section sf-section-${section.type} sf-spacing-${section.spacing || "normal"} sf-width-${section.width || "full"} ${preview ? "sf-editable" : ""} ${selectedSection === section.id ? "sf-selected" : ""}`}
             >
               {preview && (
                 <button
@@ -114,7 +115,7 @@ export function Storefront({
                   Редагувати: {section.title || section.type}
                 </button>
               )}
-              {section.type === "hero" ? (
+              {["hero", "promo"].includes(section.type) ? (
                 <div
                   className={`sf-hero ${section.imageUrl ? "sf-hero-with-image" : ""}`}
                 >
@@ -122,7 +123,10 @@ export function Storefront({
                     <p className="sf-kicker">{design.brandName} · Колекція</p>
                     <h1>{section.title}</h1>
                     {section.text && <p className="sf-lead">{section.text}</p>}
-                    <a className="sf-button" href="#products">
+                    <a
+                      className="sf-button"
+                      href={section.buttonUrl || `/shop/${store.slug}/catalog`}
+                    >
                       {section.buttonLabel || "Переглянути колекцію"}
                     </a>
                   </div>
@@ -143,8 +147,47 @@ export function Storefront({
                 <>
                   <div className="sf-section-heading">
                     <h2>{section.title}</h2>
-                    {section.text && <p>{section.text}</p>}
+                    {section.text &&
+                      !["faq", "benefits"].includes(section.type) && (
+                        <p style={{ whiteSpace: "pre-line" }}>{section.text}</p>
+                      )}
                   </div>
+                  {section.type === "image" && section.imageUrl && (
+                    <Image
+                      className="sf-content-image"
+                      src={section.imageUrl}
+                      alt={section.title}
+                      width={1200}
+                      height={800}
+                      unoptimized
+                    />
+                  )}
+                  {section.type === "faq" && (
+                    <div className="sf-faq">
+                      {section.text
+                        .split("\n")
+                        .filter(Boolean)
+                        .map((line, i) => {
+                          const [question, ...answer] = line.split("|");
+                          return (
+                            <details key={i}>
+                              <summary>{question.trim()}</summary>
+                              <p>{answer.join("|").trim()}</p>
+                            </details>
+                          );
+                        })}
+                    </div>
+                  )}
+                  {section.type === "benefits" && (
+                    <ul className="sf-benefits">
+                      {section.text
+                        .split("\n")
+                        .filter(Boolean)
+                        .map((line, i) => (
+                          <li key={i}>{line}</li>
+                        ))}
+                    </ul>
+                  )}
                   {section.type === "categories" &&
                     (categories.length ? (
                       <div className="sf-categories">

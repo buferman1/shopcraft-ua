@@ -106,3 +106,33 @@ SHOPCRAFT_API_FIXTURE_FILE=/absolute/private/fixture.json \
 `supabase/tests/commerce.sql` та `supabase/tests/design_versions.sql` перевіряють захист і транзакції в rollback-транзакціях. `tests/e2e/commerce.spec.ts` потребує `SHOPCRAFT_COMMERCE_FIXTURE_FILE` з `{ "email": "TEST_EMAIL", "password": "TEST_PASSWORD", "storeId": "ISOLATED_STORE_UUID", "slug": "isolated-store-slug" }` поза Git. Це ізольований опублікований магазин із товаром `QA Shirt` / `qa-shirt` (варіант `M`, ціна 120, залишок мінімум 5), 25 товарами `QA Item`, чернеткою Minimal `Commerce QA` версії 1. Після перевірки скасуйте тільки тестові замовлення й видаліть тільки тестовий магазин, створених покупців і файл fixture. Не використовуйте справжній торговий магазин.
 
 `supabase/tests/design_isolation.sql` у транзакції перевіряє приватність чернеток, незалежність опублікованого snapshot, відмову застарілим версіям, ізоляцію tenants, права support/editor та зняття з публікації; завершується ROLLBACK. `tests/e2e/editor.spec.ts` запускається лише з `SHOPCRAFT_EDITOR_FIXTURE_FILE`, який містить `{ "email": "TEST_EMAIL", "password": "TEST_PASSWORD", "storeId": "ISOLATED_STORE_UUID", "slug": "isolated-store-slug" }`. Це має бути окремий тестовий магазин з активним товаром «Активний тестовий товар», варіантом із залишком та чернеткою «Приватний тестовий товар»; файл зберігайте поза Git. Сценарій перевіряє три теми, реальний preview, тексти/колір, видимість і порядок блоків, undo/redo, drag-and-drop, збереження після reload, приватну чернетку, публічну картку товару й мобільну ширину. Після тесту приберіть тільки цей тестовий магазин і файл облікових даних.
+
+
+## Expanded builder and catalog (October 2026)
+
+The editor now supports 10 theme presets, 10 section types and up to 30 sections
+per page. Sections can repeat and be duplicated; each has a unique ID. New
+sections: text, image, promotional banner, FAQ and benefits. Merchants can adjust
+spacing, alignment, content width and banner links. Tablet preview complements
+desktop and phone previews. Existing drafts remain compatible; undo/redo,
+autosave, version history and explicit publication are preserved.
+
+The public catalog filters all matching database rows before pagination: search,
+category, minimum/maximum base price, exact variant size/color, in-stock variants
+and discounted base price. Combined variant filters must match the same variant.
+Sorting supports newest, name and both price directions. Page links preserve
+filters. Prices refer to the base product price, not variant overrides. Size and
+color inputs use the values entered by merchants, including capitalization.
+
+There is no 500-product cap in the catalog. `supabase/tests/catalog_scale.sql`
+creates 525 products inside a rolled-back transaction and checks visibility,
+discounts, combined filters, final-page results and private-store isolation.
+It does not populate a customer's store. Run the SQL against a migrated test
+project. Apply migration `expanded_builder_catalog` before deploying this version;
+it expands accepted theme IDs, adds the generated `on_sale` field and indexes.
+
+Validation for this increment: 43 unit tests passed; catalog scale SQL passed
+against Supabase. Authenticated browser tests require an isolated fixture (see
+existing test instructions). Local build was blocked by runtime restrictions;
+GitHub CI and Vercel preview remain the release gates. This increment does not
+claim all original SaaS requirements, CSV import or advanced theme page templates.

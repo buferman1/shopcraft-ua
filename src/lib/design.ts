@@ -1,6 +1,17 @@
 import { z } from "zod";
 
-export const themeIds = ["minimal", "street", "boutique"] as const;
+export const themeIds = [
+  "minimal",
+  "street",
+  "boutique",
+  "linen",
+  "atelier",
+  "sport",
+  "sneaker",
+  "kids",
+  "accessory",
+  "denim",
+] as const;
 export type ThemeId = (typeof themeIds)[number];
 export const themes = {
   minimal: {
@@ -24,6 +35,55 @@ export const themes = {
     foreground: "#42232e",
     accent: "#953756",
   },
+  linen: {
+    name: "Linen",
+    description: "Жіночий одяг · м’яка природна палітра",
+    background: "#faf8f1",
+    foreground: "#303a30",
+    accent: "#53684d",
+  },
+  atelier: {
+    name: "Atelier",
+    description: "Luxury · редакційна типографіка",
+    background: "#f5f0e8",
+    foreground: "#24201b",
+    accent: "#80623a",
+  },
+  sport: {
+    name: "Motion",
+    description: "Спортивний одяг · виразна геометрія",
+    background: "#eef5fa",
+    foreground: "#152a38",
+    accent: "#164a87",
+  },
+  sneaker: {
+    name: "Sneaker",
+    description: "Кросівки · контраст і великі картки",
+    background: "#f1f0ff",
+    foreground: "#262147",
+    accent: "#5743ad",
+  },
+  kids: {
+    name: "Little",
+    description: "Дитячий одяг · м’які форми",
+    background: "#fff9e9",
+    foreground: "#473820",
+    accent: "#805a22",
+  },
+  accessory: {
+    name: "Objects",
+    description: "Аксесуари · компактна галерея",
+    background: "#f7f2f8",
+    foreground: "#38213c",
+    accent: "#793e7e",
+  },
+  denim: {
+    name: "Denim",
+    description: "Чоловічий одяг · стримана сітка",
+    background: "#edf1f5",
+    foreground: "#1b2e45",
+    accent: "#294f79",
+  },
 } satisfies Record<
   ThemeId,
   {
@@ -40,6 +100,11 @@ export const sectionTypes = [
   "products",
   "about",
   "contact",
+  "text",
+  "image",
+  "promo",
+  "faq",
+  "benefits",
 ] as const;
 export type SectionType = (typeof sectionTypes)[number];
 export const sectionNames: Record<SectionType, string> = {
@@ -48,6 +113,11 @@ export const sectionNames: Record<SectionType, string> = {
   products: "Товари",
   about: "Про бренд",
   contact: "Контакти",
+  text: "Текст",
+  image: "Зображення",
+  promo: "Промобанер",
+  faq: "Запитання та відповіді",
+  benefits: "Переваги",
 };
 const hex = z
   .string()
@@ -72,6 +142,27 @@ export const sectionSchema = z
     text: z.string().max(1200),
     buttonLabel: z.string().max(40),
     imageUrl,
+    spacing: z.enum(["compact", "normal", "airy"]).optional(),
+    align: z.enum(["left", "center", "right"]).optional(),
+    width: z.enum(["full", "narrow"]).optional(),
+    buttonUrl: z
+      .string()
+      .max(2048)
+      .refine(
+        (v) =>
+          !v ||
+          /^#[a-zA-Z0-9-]+$/.test(v) ||
+          /^\/(?!\/)[^\\\s]*$/.test(v) ||
+          (() => {
+            try {
+              return new URL(v).protocol === "https:";
+            } catch {
+              return false;
+            }
+          })(),
+        "Вкажіть HTTPS або внутрішнє посилання",
+      )
+      .optional(),
   })
   .strict();
 export const designSchema = z
@@ -92,12 +183,10 @@ export const designSchema = z
     sections: z
       .array(sectionSchema)
       .min(1)
-      .max(5)
+      .max(30)
       .refine(
-        (items) =>
-          new Set(items.map((s) => s.id)).size === items.length &&
-          new Set(items.map((s) => s.type)).size === items.length,
-        "Блоки не повинні повторюватися",
+        (items) => new Set(items.map((s) => s.id)).size === items.length,
+        "Ідентифікатори блоків мають бути унікальними",
       ),
   })
   .strict()
@@ -141,6 +230,17 @@ export function accentText(color: string) {
 }
 export function newSection(type: SectionType): DesignSection {
   const content: Record<SectionType, [string, string]> = {
+    text: ["Наша історія", "Додайте свій текст."],
+    image: ["Деталі колекції", ""],
+    promo: ["Особлива пропозиція", "Розкажіть про умови пропозиції."],
+    faq: [
+      "Часті запитання",
+      "Як обрати розмір? | Скористайтеся таблицею розмірів.\nЯк оформити повернення? | Зв’яжіться з магазином.",
+    ],
+    benefits: [
+      "Чому обирають нас",
+      "Увага до деталей\nДопомога з вибором\nПрозорі умови доставки",
+    ],
     hero: ["Стиль, який обираєш ти", "Відкрий колекцію та знайди своє."],
     products: ["Наша колекція", "Речі для твого щоденного стилю."],
     categories: ["Обери свій напрям", ""],
@@ -172,7 +272,9 @@ export function defaultDesign(
     background: themes[theme].background,
     foreground: themes[theme].foreground,
     accent: themes[theme].accent,
-    font: theme === "boutique" ? "serif" : "sans",
+    font: ["boutique", "atelier", "linen", "accessory"].includes(theme)
+      ? "serif"
+      : "sans",
     email: "",
     phone: "",
     sections: (theme === "boutique"
@@ -188,7 +290,9 @@ export function applyTheme(design: Design, theme: ThemeId): Design {
     background: themes[theme].background,
     foreground: themes[theme].foreground,
     accent: themes[theme].accent,
-    font: theme === "boutique" ? "serif" : "sans",
+    font: ["boutique", "atelier", "linen", "accessory"].includes(theme)
+      ? "serif"
+      : "sans",
   };
 }
 export function moveSection(

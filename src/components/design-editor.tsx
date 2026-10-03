@@ -83,7 +83,9 @@ export function DesignEditor({
   );
   const [tab, setTab] = useState<"themes" | "brand" | "blocks">("themes");
   const [selected, setSelected] = useState(initialDesign.sections[0].id);
-  const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+  const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">(
+    "desktop",
+  );
   const [dragged, setDragged] = useState<string | null>(null);
   const [past, setPast] = useState<Design[]>([]);
   const [future, setFuture] = useState<Design[]>([]);
@@ -238,7 +240,8 @@ export function DesignEditor({
     });
   }
   function addBlock(type: SectionType) {
-    const next = newSection(type);
+    if (design.sections.length >= 30) return;
+    const next = { ...newSection(type), id: crypto.randomUUID() };
     change({ ...design, sections: [...design.sections, next] });
     setSelected(next.id);
   }
@@ -605,7 +608,7 @@ export function DesignEditor({
                     </li>
                   ))}
                 </ol>
-                {design.sections.length < sectionTypes.length && (
+                {design.sections.length < 30 && (
                   <label className="field">
                     Додати блок
                     <select
@@ -616,16 +619,11 @@ export function DesignEditor({
                       }}
                     >
                       <option value="">Оберіть блок</option>
-                      {sectionTypes
-                        .filter(
-                          (type) =>
-                            !design.sections.some((s) => s.type === type),
-                        )
-                        .map((type) => (
-                          <option value={type} key={type}>
-                            {sectionNames[type]}
-                          </option>
-                        ))}
+                      {sectionTypes.map((type) => (
+                        <option value={type} key={type}>
+                          {sectionNames[type]}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 )}
@@ -659,7 +657,9 @@ export function DesignEditor({
                         onChange={(e) => blockField("text", e.target.value)}
                       />
                     </label>
-                    {selectedBlock.type === "hero" && (
+                    {["hero", "promo", "image"].includes(
+                      selectedBlock.type,
+                    ) && (
                       <>
                         <label className="field">
                           Текст кнопки
@@ -693,6 +693,94 @@ export function DesignEditor({
                         )}
                       </>
                     )}
+                    <p className="muted">
+                      Блоків: {design.sections.length} / 30
+                    </p>
+                    {selectedBlock.type === "faq" && (
+                      <p>
+                        Кожне запитання з нового рядка: запитання | відповідь.
+                      </p>
+                    )}
+                    {selectedBlock.type === "benefits" && (
+                      <p>Кожна перевага — з нового рядка.</p>
+                    )}
+                    <label className="field">
+                      Відступи
+                      <select
+                        value={selectedBlock.spacing || "normal"}
+                        onChange={(e) =>
+                          blockField(
+                            "spacing",
+                            e.target.value as "compact" | "normal" | "airy",
+                          )
+                        }
+                      >
+                        <option value="compact">Компактні</option>
+                        <option value="normal">Звичайні</option>
+                        <option value="airy">Великі</option>
+                      </select>
+                    </label>
+                    <label className="field">
+                      Вирівнювання
+                      <select
+                        value={selectedBlock.align || "left"}
+                        onChange={(e) =>
+                          blockField(
+                            "align",
+                            e.target.value as "left" | "center" | "right",
+                          )
+                        }
+                      >
+                        <option value="left">Ліворуч</option>
+                        <option value="center">По центру</option>
+                        <option value="right">Праворуч</option>
+                      </select>
+                    </label>
+                    <label className="field">
+                      Ширина
+                      <select
+                        value={selectedBlock.width || "full"}
+                        onChange={(e) =>
+                          blockField(
+                            "width",
+                            e.target.value as "full" | "narrow",
+                          )
+                        }
+                      >
+                        <option value="full">Повна</option>
+                        <option value="narrow">Вузька</option>
+                      </select>
+                    </label>
+                    {["hero", "promo"].includes(selectedBlock.type) && (
+                      <label className="field">
+                        Посилання кнопки
+                        <input
+                          value={selectedBlock.buttonUrl || ""}
+                          placeholder="#products"
+                          onChange={(e) =>
+                            blockField("buttonUrl", e.target.value)
+                          }
+                        />
+                      </label>
+                    )}
+                    <button
+                      type="button"
+                      className="button secondary"
+                      disabled={design.sections.length >= 30}
+                      onClick={() => {
+                        const copy = {
+                          ...selectedBlock,
+                          id: crypto.randomUUID(),
+                        };
+                        change({
+                          ...design,
+                          sections: [...design.sections, copy],
+                        });
+                        setSelected(copy.id);
+                      }}
+                    >
+                      Дублювати блок
+                    </button>
                     <button
                       type="button"
                       className="design-remove"
@@ -729,6 +817,13 @@ export function DesignEditor({
         <div className="design-preview-area">
           <div className="preview-toolbar">
             <div className="preview-devices" aria-label="Розмір перегляду">
+              <button
+                type="button"
+                aria-pressed={device === "tablet"}
+                onClick={() => setDevice("tablet")}
+              >
+                Планшет
+              </button>
               <button
                 aria-pressed={device === "desktop"}
                 onClick={() => setDevice("desktop")}

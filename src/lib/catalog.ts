@@ -1,4 +1,5 @@
 import "server-only";
+import { catalogRange, type CatalogSort } from "./catalog-filters";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CatalogProduct, CatalogCategory } from "./design";
 
@@ -11,13 +12,24 @@ export async function loadCatalog(
     pageSize?: number;
     query?: string;
     categoryId?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    size?: string;
+    color?: string;
+    inStock?: boolean;
+    onSale?: boolean;
+    sort?: CatalogSort;
   } = {},
 ) {
-  const page = options.page || 1;
-  const size = options.pageSize || 100;
+  const range = catalogRange(options.page || 1, options.pageSize || 100);
+  const variants = Boolean(options.size || options.color || options.inStock);
   let query = client
     .from("products")
-    .select("id,name,slug,description,price,category_id", { count: "exact" })
+    .select(
+      "id,name,slug,description,price,category_id" +
+        (variants ? ",product_variants!inner(id)" : ""),
+      { count: "exact" },
+    )
     .eq("store_id", storeId)
     .eq("status", "active");
   if (options.categoryId) query = query.eq("category_id", options.categoryId);
@@ -26,11 +38,30 @@ export async function loadCatalog(
       "name",
       "%" + options.query.replace(/[\\%_]/g, "\\$&") + "%",
     );
+  if (options.minPrice !== undefined)
+    query = query.gte("price", options.minPrice);
+  if (options.maxPrice !== undefined)
+    query = query.lte("price", options.maxPrice);
+  if (options.onSale) query = query.eq("on_sale", true);
+  if (options.size)
+    query = query.eq("product_variants.options->>size", options.size);
+  if (options.color)
+    query = query.eq("product_variants.options->>color", options.color);
+  if (options.inStock)
+    query = query.gt("product_variants.inventory_quantity", 0);
+  const sort = options.sort || "newest";
   const [productResult, categoryResult] = await Promise.all([
     query
-      .order("created_at", { ascending: false })
+      .order(
+        sort === "name"
+          ? "name"
+          : sort.startsWith("price")
+            ? "price"
+            : "created_at",
+        { ascending: sort === "name" || sort === "price-asc" },
+      )
       .order("id")
-      .range((page - 1) * size, page * size - 1),
+      .range(...range),
     client
       .from("categories")
       .select("id,name,slug")
@@ -39,7 +70,11 @@ export async function loadCatalog(
   ]);
   if (productResult.error || categoryResult.error)
     throw new Error("Не вдалося отримати каталог магазину.");
-  const ids = (productResult.data || []).map((p) => p.id);
+  const rows = (productResult.data || []) as unknown as Omit<
+    CatalogProduct,
+    "image" | "imageAlt"
+  >[];
+  const ids = rows.map((p) => p.id);
   const imageResult = ids.length
     ? await client
         .from("product_images")
@@ -53,22 +88,24 @@ export async function loadCatalog(
   for (const image of imageResult.data || [])
     if (!firstImages.has(image.product_id))
       firstImages.set(image.product_id, image);
-  const products: CatalogProduct[] = (productResult.data || []).map(
-    (product) => {
-      const image = firstImages.get(product.id);
-      return {
-        ...product,
-        price: Number(product.price),
-        ...(image
-          ? {
-              image: client.storage.from("store-media").getPublicUrl(image.path)
-                .data.publicUrl,
-              imageAlt: image.alt,
-            }
-          : {}),
-      };
-    },
-  );
+  const products: CatalogProduct[] = rows.map((product) => {
+    const image = firstImages.get(product.id);
+    return {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
+      category_id: product.category_id,
+      price: Number(product.price),
+      ...(image
+        ? {
+            image: client.storage.from("store-media").getPublicUrl(image.path)
+              .data.publicUrl,
+            imageAlt: image.alt,
+          }
+        : {}),
+    };
+  });
   return {
     products,
     count: productResult.count || 0,

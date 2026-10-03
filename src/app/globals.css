@@ -1343,3 +1343,79 @@ th {
     transition: none;
   }
 }
+
+/* Expanded merchant-controlled sections and theme treatments. */
+.sf-section.sf-spacing-compact {
+  padding-block: 24px;
+}
+.sf-section.sf-spacing-airy {
+  padding-block: 96px;
+}
+.sf-section.sf-width-narrow {
+  max-width: 860px;
+  margin-inline: auto;
+}
+.sf-content-image {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+.sf-faq details {
+  padding: 20px 0;
+  border-bottom: 1px solid currentColor;
+}
+.sf-faq summary {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 44px;
+}
+.sf-benefits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 24px;
+  list-style: none;
+  padding: 0;
+}
+.sf-benefits li {
+  border: 1px solid currentColor;
+  padding: 24px;
+}
+.preview-tablet {
+  width: min(100%, 768px);
+  margin-inline: auto;
+}
+.sf-kids .sf-product-media,
+.sf-kids .sf-hero-media,
+.sf-kids .sf-button {
+  border-radius: 28px;
+}
+.sf-atelier .sf-hero-copy,
+.sf-linen .sf-hero-copy {
+  text-align: center;
+}
+.sf-atelier h1 {
+  font-style: italic;
+}
+.sf-sport h1,
+.sf-sneaker h1 {
+  text-transform: uppercase;
+  letter-spacing: -0.06em;
+}
+.sf-sport .sf-button {
+  border-radius: 0;
+}
+.sf-accessory .sf-products {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.sf-denim .sf-section-heading {
+  border-bottom: 2px solid currentColor;
+  padding-bottom: 24px;
+}
+@media (max-width: 640px) {
+  .sf-section.sf-spacing-airy {
+    padding-block: 48px;
+  }
+  .sf-accessory .sf-products {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
