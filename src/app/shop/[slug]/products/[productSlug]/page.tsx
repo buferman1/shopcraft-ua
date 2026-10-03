@@ -48,6 +48,8 @@ export default async function ProductPage({
           ← До колекції
         </a>
         <StorefrontProduct
+          storeId={store.id}
+          slug={slug}
           product={{ ...product, price: Number(product.price) }}
           images={(images.data || []).map((image) => ({
             path: supabase.storage.from("store-media").getPublicUrl(image.path)

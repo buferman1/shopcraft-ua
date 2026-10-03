@@ -12,7 +12,7 @@ export default async function DesignPage({
 }) {
   const { storeId } = await params;
   const { supabase, store, member } = await storeAccess(storeId);
-  const [draft, published, catalog] = await Promise.all([
+  const [draft, published, catalog, history] = await Promise.all([
     supabase
       .from("store_designs")
       .select("config,revision")
@@ -24,8 +24,14 @@ export default async function DesignPage({
       .eq("store_id", storeId)
       .maybeSingle(),
     loadCatalog(supabase, storeId),
+    supabase
+      .from("store_design_versions")
+      .select("revision,created_at")
+      .eq("store_id", storeId)
+      .order("revision", { ascending: false })
+      .limit(30),
   ]);
-  if (draft.error || published.error)
+  if (draft.error || published.error || history.error)
     throw new Error("Не вдалося завантажити оформлення.");
   const parsed = designSchema.safeParse(draft.data?.config);
   if (draft.data && !parsed.success)
@@ -44,6 +50,10 @@ export default async function DesignPage({
         }
         products={catalog.products}
         categories={catalog.categories}
+        versions={(history.data || []).map((v) => ({
+          ...v,
+          revision: Number(v.revision),
+        }))}
         editable={canEditCatalog(member.role) && store.status !== "suspended"}
         canPublish={
           ["owner", "admin"].includes(member.role) &&

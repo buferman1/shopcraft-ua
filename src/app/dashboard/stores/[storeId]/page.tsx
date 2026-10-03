@@ -72,6 +72,22 @@ export default async function StorePage({
         </div>
         <div className="design-toolbar-actions">
           <span className="badge">Роль: {member.role}</span>
+          {["owner", "admin", "manager", "support"].includes(member.role) && (
+            <Link
+              className="button secondary"
+              href={`/dashboard/stores/${storeId}/orders`}
+            >
+              Замовлення
+            </Link>
+          )}
+          {["owner", "admin"].includes(member.role) && (
+            <Link
+              className="button secondary"
+              href={`/dashboard/stores/${storeId}/settings`}
+            >
+              Налаштування
+            </Link>
+          )}
           <Link
             className="button"
             href={"/dashboard/stores/" + storeId + "/design"}

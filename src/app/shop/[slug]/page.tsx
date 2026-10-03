@@ -10,11 +10,19 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const { design } = await publishedStore(slug);
+  const { design, supabase, store } = await publishedStore(slug);
+  const { data, error } = await supabase
+    .from("store_settings")
+    .select("seo_title,seo_description")
+    .eq("store_id", store.id)
+    .maybeSingle();
+  if (error) throw new Error("Не вдалося отримати метадані магазину");
   return {
-    title: `${design.brandName} — колекція`,
+    title: data?.seo_title || `${design.brandName} — колекція`,
     description:
-      design.sections.find((s) => s.type === "hero")?.text || design.brandName,
+      data?.seo_description ||
+      design.sections.find((s) => s.type === "hero")?.text ||
+      design.brandName,
   };
 }
 export default async function ShopPage({

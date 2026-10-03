@@ -5,6 +5,7 @@ import {
   saveDesign,
   publishDesign,
   uploadDesignImage,
+  loadDesignVersion,
 } from "@/app/dashboard/design-actions";
 import {
   themes,
@@ -62,6 +63,7 @@ export function DesignEditor({
   categories,
   editable,
   canPublish,
+  versions = [],
 }: {
   store: StoreSummary;
   initialDesign: Design;
@@ -71,6 +73,7 @@ export function DesignEditor({
   categories: CatalogCategory[];
   editable: boolean;
   canPublish: boolean;
+  versions?: { revision: number; created_at: string }[];
 }) {
   const [design, setDesign] = useState(initialDesign);
   const [baseline, setBaseline] = useState(JSON.stringify(initialDesign));
@@ -87,9 +90,37 @@ export function DesignEditor({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
+  const [autosave, setAutosave] = useState(false);
+  const [versionToLoad, setVersionToLoad] = useState("");
   const dirty = JSON.stringify(design) !== baseline;
   const selectedBlock = design.sections.find((s) => s.id === selected);
   const publicPath = `/shop/${store.slug}`;
+
+  useEffect(() => {
+    if (!autosave || !dirty || !editable || pending || error) return;
+    const snapshot = JSON.stringify(design);
+    const timer = setTimeout(
+      () =>
+        startTransition(async () => {
+          try {
+            const result = await saveDesign(store.id, design, revision);
+            if (result.error) {
+              setError(result.error);
+              return;
+            }
+            setRevision(result.revision!);
+            setBaseline(snapshot);
+            setMessage("Чернетку збережено автоматично");
+          } catch {
+            setError(
+              "Автозбереження не вдалося. Перевірте з’єднання та збережіть вручну.",
+            );
+          }
+        }),
+      2500,
+    );
+    return () => clearTimeout(timer);
+  }, [autosave, dirty, editable, pending, error, design, revision, store.id]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -234,6 +265,15 @@ export function DesignEditor({
           </p>
         </div>
         <div className="design-toolbar-actions">
+          <label className="consent-label">
+            <input
+              type="checkbox"
+              checked={autosave}
+              disabled={!editable || pending}
+              onChange={(e) => setAutosave(e.target.checked)}
+            />
+            Автозбереження чернетки
+          </label>
           {publishedRevision !== null && (
             <a
               className="button secondary"
@@ -268,6 +308,63 @@ export function DesignEditor({
         <p className="notice error" role="alert">
           {error}
         </p>
+      )}
+      {versions.length > 0 && editable && (
+        <div className="design-toolbar-actions">
+          <label className="field">
+            Історія оформлення
+            <select
+              value={versionToLoad}
+              onChange={(e) => setVersionToLoad(e.target.value)}
+              disabled={pending}
+            >
+              <option value="">Оберіть збережену версію</option>
+              {versions.map((v) => (
+                <option key={v.revision} value={v.revision}>
+                  Версія {v.revision} ·{" "}
+                  {new Date(v.created_at).toLocaleString("uk-UA", {
+                    timeZone: "Europe/Kyiv",
+                  })}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            className="button secondary"
+            disabled={pending || !versionToLoad}
+            onClick={() =>
+              startTransition(async () => {
+                try {
+                  const result = await loadDesignVersion(
+                    store.id,
+                    Number(versionToLoad),
+                  );
+                  if (result.error) {
+                    setError(result.error);
+                    return;
+                  }
+                  if (result.design) {
+                    setPast((current) => [...current.slice(-29), design]);
+                    setFuture([]);
+                    setDesign(result.design);
+                    setError("");
+                    setMessage(
+                      "Версію завантажено в редактор. Збережіть і опублікуйте окремо.",
+                    );
+                  }
+                } catch {
+                  setError("Не вдалося відкрити збережену версію");
+                }
+              })
+            }
+          >
+            Завантажити в редактор
+          </button>
+          <small>
+            Зберігаються останні 30 версій. Список оновлюється після
+            перезавантаження.
+          </small>
+        </div>
       )}
       {message && (
         <p className="notice success" role="status">

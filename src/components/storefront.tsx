@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { CartLink } from "./cart";
 import { formatPrice } from "@/lib/price";
 import type { CSSProperties, ReactNode } from "react";
 import {
@@ -39,7 +40,8 @@ export function StorefrontShell({
           {design.brandName}
         </a>
         <nav aria-label="Навігація магазину">
-          <a href={`/shop/${store.slug}#products`}>Колекція</a>
+          <CartLink storeId={store.id} slug={store.slug} />
+          <a href={`/shop/${store.slug}/catalog`}>Колекція</a>
           {design.sections.some((s) => s.type === "contact" && s.enabled) && (
             <a href={`/shop/${store.slug}#contact`}>Контакти</a>
           )}
@@ -149,7 +151,7 @@ export function Storefront({
                         {categories.map((category, index) => (
                           <a
                             key={category.id}
-                            href={`/shop/${store.slug}?category=${category.slug}#products`}
+                            href={`/shop/${store.slug}/catalog?category=${category.slug}`}
                           >
                             <span className="sf-category-number">
                               {String(index + 1).padStart(2, "0")}

@@ -5,6 +5,30 @@ import { canEditCatalog } from "@/lib/validation";
 import { designSchema } from "@/lib/design";
 import { imageFormat, MAX_IMAGE_BYTES } from "@/lib/media";
 
+export async function loadDesignVersion(
+  storeId: string,
+  revision: number,
+): Promise<{ error?: string; design?: import("@/lib/design").Design }> {
+  const { supabase, store, member } = await storeAccess(storeId);
+  if (
+    !canEditCatalog(member.role) ||
+    store.status === "suspended" ||
+    !Number.isSafeInteger(revision) ||
+    revision < 1
+  )
+    return { error: "Немає доступу до версії" };
+  const { data, error } = await supabase
+    .from("store_design_versions")
+    .select("config")
+    .eq("store_id", storeId)
+    .eq("revision", revision)
+    .maybeSingle();
+  const parsed = designSchema.safeParse(data?.config);
+  if (error || !parsed.success)
+    return { error: "Версія недоступна або має непідтримуваний формат" };
+  return { design: parsed.data };
+}
+
 export type DesignResult = {
   error?: string;
   success?: string;

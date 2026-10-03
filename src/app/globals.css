@@ -1,4 +1,87 @@
 @import "tailwindcss";
+
+.commerce-panel {
+  max-width: 1200px;
+  margin: auto;
+  padding: 40px 24px;
+}
+.commerce-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.cart-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #8885;
+  padding: 20px 0;
+}
+.cart-row > div {
+  flex: 1;
+  min-width: 140px;
+}
+.cart-row input {
+  width: 75px;
+  display: block;
+  padding: 10px;
+  color: #192125;
+  background: white;
+  border: 1px solid #889;
+  border-radius: 6px;
+}
+.commerce-panel .field input,
+.commerce-panel textarea,
+.commerce-panel select {
+  background: white;
+  color: #192125;
+}
+.consent-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 16px 0;
+}
+.consent-label input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.honeypot {
+  position: absolute;
+  left: -10000px;
+}
+.sales-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+.sf-header nav {
+  flex-wrap: wrap;
+}
+@media (max-width: 750px) {
+  .commerce-grid,
+  .sales-stats {
+    grid-template-columns: 1fr;
+  }
+  .commerce-panel {
+    padding: 24px 16px;
+  }
+}
+@media print {
+  header,
+  nav,
+  form,
+  .button {
+    display: none !important;
+  }
+  .commerce-grid {
+    display: block;
+  }
+}
 :root {
   --ink: #182821;
   --muted: #66756d;

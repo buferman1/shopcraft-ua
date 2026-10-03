@@ -3,28 +3,52 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CatalogProduct, CatalogCategory } from "./design";
 
 // Only fields intended for a shopper are passed to the storefront renderer.
-export async function loadCatalog(client: SupabaseClient, storeId: string) {
-  const [productResult, categoryResult, imageResult] = await Promise.all([
-    client
-      .from("products")
-      .select("id,name,slug,description,price,category_id")
-      .eq("store_id", storeId)
-      .eq("status", "active")
+export async function loadCatalog(
+  client: SupabaseClient,
+  storeId: string,
+  options: {
+    page?: number;
+    pageSize?: number;
+    query?: string;
+    categoryId?: string;
+  } = {},
+) {
+  const page = options.page || 1;
+  const size = options.pageSize || 100;
+  let query = client
+    .from("products")
+    .select("id,name,slug,description,price,category_id", { count: "exact" })
+    .eq("store_id", storeId)
+    .eq("status", "active");
+  if (options.categoryId) query = query.eq("category_id", options.categoryId);
+  if (options.query)
+    query = query.ilike(
+      "name",
+      "%" + options.query.replace(/[\\%_]/g, "\\$&") + "%",
+    );
+  const [productResult, categoryResult] = await Promise.all([
+    query
       .order("created_at", { ascending: false })
-      .limit(100),
+      .order("id")
+      .range((page - 1) * size, page * size - 1),
     client
       .from("categories")
       .select("id,name,slug")
       .eq("store_id", storeId)
       .order("name"),
-    client
-      .from("product_images")
-      .select("product_id,path,alt")
-      .eq("store_id", storeId)
-      .order("created_at"),
   ]);
-  if (productResult.error || categoryResult.error || imageResult.error)
+  if (productResult.error || categoryResult.error)
     throw new Error("Не вдалося отримати каталог магазину.");
+  const ids = (productResult.data || []).map((p) => p.id);
+  const imageResult = ids.length
+    ? await client
+        .from("product_images")
+        .select("product_id,path,alt")
+        .eq("store_id", storeId)
+        .in("product_id", ids)
+        .order("created_at")
+    : { data: [], error: null };
+  if (imageResult.error) throw new Error("Не вдалося отримати фото товарів.");
   const firstImages = new Map<string, { path: string; alt: string }>();
   for (const image of imageResult.data || [])
     if (!firstImages.has(image.product_id))
@@ -47,6 +71,7 @@ export async function loadCatalog(client: SupabaseClient, storeId: string) {
   );
   return {
     products,
+    count: productResult.count || 0,
     categories: (categoryResult.data || []) as CatalogCategory[],
   };
 }
